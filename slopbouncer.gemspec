@@ -5,10 +5,11 @@ require_relative 'lib/slopbouncer/version'
 Gem::Specification.new do |spec|
   spec.name = 'slopbouncer'
   spec.version = Slopbouncer::VERSION
-  spec.summary = 'Flags tests that got weaker in a change'
-  spec.description = 'A static, diff-aware check for code written by coding agents. It compares each test ' \
-                     'before and after a change and flags the ones that got weaker, and can tell the agent ' \
-                     'that made the change before it finishes.'
+  spec.summary = 'A stop hook for coding agents that catches weakened tests'
+  spec.description = 'When a coding agent is about to finish and has weakened an existing test, Slopbouncer sends ' \
+                     'it back once to put the test back or say which behaviour changed. The same check runs as a ' \
+                     'plain command in a pipeline, comparing each test before and after a change without running ' \
+                     'any code.'
   spec.authors = ['Kipple Pty Ltd']
   spec.homepage = 'https://github.com/mainline-dev/slopbouncer'
   spec.license = 'MIT'
