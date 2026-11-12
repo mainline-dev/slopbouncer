@@ -16,13 +16,36 @@ module Slopbouncer
     # gone: tests no longer in the file. fresh: tests that are new to it.
     # The caller decides whether a gone test turned up in another file.
     def self.call(file, before, after)
-      now = after.to_h { |test| [test.name, test] }
-      gone = before.reject { |test| now.key?(test.name) }
-      fresh = after.reject { |test| before.any? { |was| was.name == test.name } }
+      named = same_name(before, after)
+      gone = without(before, named.map(&:first))
+      fresh = without(after, named.map(&:last))
       reworded = reworded(gone, fresh)
-      pairs = before.filter_map { |was| [was, now[was.name]] if now.key?(was.name) } + reworded
-      Result.new(findings: pairs.flat_map { |was, test| weaker(file, was, test) },
-        gone: gone - reworded.map(&:first), fresh: fresh - reworded.map(&:last))
+      Result.new(findings: (named + reworded).flat_map { |was, test| weaker(file, was, test) },
+        gone: without(gone, reworded.map(&:first)), fresh: without(fresh, reworded.map(&:last)))
+    end
+
+    # Pairs each test with the test of the same name after the change. A
+    # file can hold several tests with one name: those are paired with the
+    # one whose body is unchanged if there is one, and otherwise in the
+    # order they appear, first with first.
+    def self.same_name(before, after)
+      waiting = after.group_by(&:name)
+      unchanged = before.filter_map { |was| pair(was, waiting) { |test| test.body == was.body } }
+      rest = without(before, unchanged.map(&:first)).filter_map { |was| pair(was, waiting) { true } }
+      (unchanged + rest).sort_by { |was, _| before.index { |test| test.equal?(was) } }
+    end
+
+    # Takes the first waiting test of this name that fits, if any.
+    def self.pair(was, waiting)
+      candidates = waiting.fetch(was.name, [])
+      place = candidates.index { |test| yield test }
+      [was, candidates.delete_at(place)] if place
+    end
+
+    # The tests that are not, one for one, among those taken. Two tests can
+    # be alike in every way and still be two tests.
+    def self.without(tests, taken)
+      tests.reject { |test| taken.any? { |other| other.equal?(test) } }
     end
 
     def self.deleted(file, test)
@@ -37,7 +60,7 @@ module Slopbouncer
         match = left.find { |test| one_edit?(was, test) } unless match && likeness(was, match) >= SAME_TEST
         next unless match
 
-        left.delete(match)
+        left.delete_at(left.index { |test| test.equal?(match) })
         [was, match]
       end
     end
@@ -87,6 +110,6 @@ module Slopbouncer
       differing = was.arguments.zip(now.arguments).reject { |before, after| before == after }
       differing.first if differing.size == 1
     end
-    private_class_method :reworded, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
+    private_class_method :same_name, :pair, :without, :reworded, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
   end
 end
