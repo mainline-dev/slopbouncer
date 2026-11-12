@@ -118,6 +118,16 @@ module SlopbouncerDSL
     @driver.slopbouncer("#{@base}..HEAD").output
   end
 
+  # What a person sees when they run the command at a terminal.
+  def shown_in_a_terminal(*flags, environment: {})
+    @driver.terminal("#{@base}..HEAD", *flags, environment: environment)
+  end
+
+  # What the command prints when its output goes to another program.
+  def piped(*flags)
+    @driver.slopbouncer("#{@base}..HEAD", *flags).output
+  end
+
   # The command with exactly these arguments.
   def slopbouncer_with(*arguments)
     @driver.slopbouncer(*arguments)

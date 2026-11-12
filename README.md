@@ -37,7 +37,25 @@ Then run it from the root of the repository you want checked:
 slopbouncer main..HEAD
 ```
 
-The argument is a range of commits. Give one commit instead, such as `HEAD` or `origin/main`, and it checks everything since then, committed or not. It prints one line for each finding:
+The argument is a range of commits. Give one commit instead, such as `HEAD` or `origin/main`, and it checks everything since then, committed or not. At a terminal it lays the findings out by file, with each rule in colour:
+
+```
+test/basket_test.rb
+  Basket applies a voucher
+    skip_added  marked to be skipped
+
+test/checkout_test.rb
+  Checkout lets a guest pay
+    assertion_removed  assert_equal "paid", order.status
+
+test/refund_test.rb
+  Refund refunds part of an order
+    expected_value_changed  100 → 90
+
+3 tests got weaker in 3 files
+```
+
+When its output goes to a file or another program, it prints one plain line for each finding:
 
 ```
 test/basket_test.rb: Basket applies a voucher: skip_added: marked to be skipped
@@ -49,9 +67,10 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 |---|---|
 | `--json` | Prints the findings as JSON |
 | `--strict` | Exits with 1 when anything is flagged |
+| `--color` | Uses the terminal layout, in colour, wherever the output goes. For a script whose own output a person reads |
 | `--agent=NAME` | Runs as that coding agent's hook (see below) |
 
-Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
+Setting `NO_COLOR` keeps the terminal layout and leaves the colour out. Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
 
 ## Feeding it back to a coding agent
 

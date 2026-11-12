@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://slopbouncer.com/">
 <style>
-  :root { --bg:#0b0c10; --panel:#12141a; --line:#232733; --text:#e8e8ea; --muted:#9a9db0; --accent:#5bd0ff; --ok:#5fd38a; --warn:#ffb454; }
+  :root { --bg:#0b0c10; --panel:#12141a; --line:#232733; --text:#e8e8ea; --muted:#9a9db0; --accent:#5bd0ff; --ok:#5fd38a; --warn:#ffb454; --bad:#ff6b6b; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 72px 20px 48px; }
@@ -30,7 +30,7 @@
   code { font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
   li code { float: right; }
   @media (max-width: 560px) { li code { float: none; display: block; } }
-  .w { color: var(--warn); } .o { color: var(--ok); } .d { color: var(--muted); }
+  .w { color: var(--warn); } .r { color: var(--bad); } .o { color: var(--ok); } .d { color: var(--muted); }
   .actions { margin-top: 28px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
   a.btn { display:inline-block; padding: 12px 18px; border-radius:6px; background:var(--accent); color:#06222d; font-weight:600; text-decoration:none; }
   .status { font: 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
@@ -68,9 +68,19 @@
   <h2>What a report looks like</h2>
 <pre><span class="d">$ slopbouncer main..HEAD</span>
 
-test/basket_test.rb: Basket applies a voucher: <span class="w">skip_added</span>: marked to be skipped
-test/checkout_test.rb: Checkout lets a guest pay: <span class="w">assertion_removed</span>: assert_equal "paid", order.status
-test/refund_test.rb: Refund refunds part of an order: <span class="w">expected_value_changed</span>: 100 → 90</pre>
+<b>test/basket_test.rb</b>
+  Basket applies a voucher
+    <span class="w">skip_added</span>  marked to be skipped
+
+<b>test/checkout_test.rb</b>
+  Checkout lets a guest pay
+    <span class="r">assertion_removed</span>  assert_equal "paid", order.status
+
+<b>test/refund_test.rb</b>
+  Refund refunds part of an order
+    <span class="w">expected_value_changed</span>  100 → 90
+
+3 tests got weaker in 3 files</pre>
 
   <h2>Feeding it back to the agent</h2>
   <p>Slopbouncer is most use when the agent that made the change hears about it. The agent knows why it changed a test, and it can put the test back. One command sets an agent up:</p>

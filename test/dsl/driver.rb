@@ -3,6 +3,7 @@
 require 'fileutils'
 require 'json'
 require 'open3'
+require 'pty'
 require 'tmpdir'
 
 # Drives the real command line against a throwaway git repository: writes
@@ -63,6 +64,21 @@ class Driver
     path = "#{File.dirname(BIN)}#{File::PATH_SEPARATOR}#{ENV.fetch('PATH')}"
     output, error, status = Open3.capture3({ 'PATH' => path }, 'sh', '-c', command, chdir: @dir, stdin_data: input)
     Run.new(findings: nil, status: status.exitstatus, output: output, error: error)
+  end
+
+  # Runs the command in a terminal of its own, as a person at a prompt does,
+  # and gives back what the terminal showed.
+  def terminal(*arguments, environment: {})
+    shown = +''
+    PTY.spawn(environment, RbConfig.ruby, BIN, *arguments, chdir: @dir) do |screen, _keys, pid|
+      begin
+        loop { shown << screen.readpartial(4096) }
+      rescue EOFError, Errno::EIO
+        nil
+      end
+      Process.wait(pid)
+    end
+    shown.force_encoding(Encoding::UTF_8).gsub("\r\n", "\n")
   end
 
   def root

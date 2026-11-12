@@ -8,6 +8,7 @@ require_relative 'slopbouncer/ruby_tests'
 require_relative 'slopbouncer/compare'
 require_relative 'slopbouncer/agents'
 require_relative 'slopbouncer/install'
+require_relative 'slopbouncer/terminal_report'
 
 # A static check that flags tests which got weaker in a change, so a person
 # can decide whether that was intended.
@@ -63,11 +64,23 @@ module Slopbouncer
     return stop_hook(target.to_s, input, agent.split('=', 2)[1] || Agents::DEFAULT) if agent
 
     findings = check(target.to_s)
-    puts arguments.include?('--json') ? JSON.pretty_generate(findings.map { |finding| finding.to_h.compact }) : report(findings)
+    puts printed(findings, arguments)
     arguments.include?('--strict') && findings.any? ? 1 : 0
   rescue Error => e
     warn e.message
     2
+  end
+
+  # JSON when asked for it. Otherwise laid out for a person when the output is
+  # a terminal or colour is asked for, and one plain line for each finding
+  # when it goes to another program.
+  def self.printed(findings, arguments)
+    return JSON.pretty_generate(findings.map { |finding| finding.to_h.compact }) if arguments.include?('--json')
+
+    asked = arguments.intersect?(%w[--color --colour])
+    return report(findings) unless asked || $stdout.tty?
+
+    TerminalReport.call(findings, colour: asked || ENV['NO_COLOR'].to_s.empty?)
   end
 
   # Sets a coding agent up in the current directory: slopbouncer install claude-code
@@ -136,5 +149,5 @@ module Slopbouncer
       "#{finding.file}: #{finding.test}: #{finding.rule}: #{what}"
     }.join("\n")
   end
-  private_class_method :deleted, :settings, :install, :stop_hook, :working_directory, :hook_input, :to_the_agent
+  private_class_method :deleted, :settings, :printed, :install, :stop_hook, :working_directory, :hook_input, :to_the_agent
 end
