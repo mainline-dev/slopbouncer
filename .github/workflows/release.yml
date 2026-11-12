@@ -1,0 +1,33 @@
+name: Release
+
+# Publishes the gem to RubyGems when a version tag (v0.2.0) is pushed.
+# RubyGems trusts this workflow in this repository as a publisher of the gem,
+# so the job signs in with a short-lived token from GitHub and no key is
+# stored anywhere. The publisher is set up once, on the gem's page at
+# rubygems.org, under "Trusted publishers".
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  gem:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bundle exec rake tag_matches_version
+      - run: bundle exec rake test
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
+      - run: gem build slopbouncer.gemspec
+      - run: gem push slopbouncer-*.gem

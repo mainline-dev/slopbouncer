@@ -111,6 +111,17 @@ bundle exec rake
 
 The tests are scenarios. Each one builds a throwaway git repository, makes a change in it, and runs the real command over that change. `PROJECT.md` holds the plan and the rules still to come.
 
+## Releasing
+
+Change the version in `lib/slopbouncer/version.rb` and commit. Then tag that commit with the same version and push the tag:
+
+```shell
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+GitHub runs the scenarios and publishes the gem to RubyGems. A tag that does not match the version is refused before anything is published.
+
 ## Licence
 
 MIT. See `LICENSE`.
