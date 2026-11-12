@@ -18,6 +18,6 @@ Gem::Specification.new do |spec|
   spec.bindir = 'bin'
   spec.executables = ['slopbouncer']
 
-  spec.add_dependency 'prism'
+  spec.add_dependency 'prism', '>= 1.5', '< 3'
   spec.metadata['rubygems_mfa_required'] = 'true'
 end
