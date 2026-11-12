@@ -2,9 +2,12 @@ Slopbouncer: a static check that flags tests which got weaker.
 
 Purpose
 Coding agents make checks pass. One way is to weaken the test.
-Slopbouncer reads a change and reports tests that got weaker, so a
-person can decide whether that was intended. It is the fast check at
-the door. Mutation testing is the slow, thorough one behind it.
+Slopbouncer is a stop hook: when an agent is about to finish and has
+weakened an existing test, it is sent back once to put the test back
+or say which behaviour changed. Behind the hook, the same check runs
+as a plain command in a pipeline and reports the tests a change made
+weaker, so a person can decide whether that was intended. Mutation
+testing is the slow, thorough check behind both.
 
 Principles
 - Static analysis only. It reads code and never runs it.
@@ -56,13 +59,14 @@ Shape of the first version
   is a short list of what counts as a test and an assertion.
 - Interface: a command line. `slopbouncer main..HEAD` prints findings
   and exits non-zero only with a --strict flag.
+- A stop hook for coding agents: `slopbouncer install` sets one up for
+  Claude Code, Cursor, Gemini CLI or Codex.
 - No GitHub app, no report format and no second language yet.
 
 Later stages
 - TypeScript and Go, and Gherkin step definitions.
 - SARIF output, so GitHub shows findings on the changed lines.
 - A GitHub Action, then a GitHub app that comments on pull requests.
-- A hook for Claude Code and other agents to run it before finishing.
 
 First experiment
 Run it across Mainline's own commit history. Record what it flags and
