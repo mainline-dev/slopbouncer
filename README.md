@@ -25,13 +25,10 @@ Status: in development. It reads Ruby tests today (Minitest, as `it` blocks or `
 
 ## Running it
 
-It needs Ruby 3.4 and git. It is not on RubyGems yet, so build the gem from a clone and install that:
+It needs Ruby 3.4 and git.
 
 ```shell
-git clone https://github.com/mainline-dev/slopbouncer.git
-cd slopbouncer
-gem build slopbouncer.gemspec
-gem install slopbouncer-0.1.0.gem
+gem install slopbouncer
 ```
 
 Then run it from the root of the repository you want checked:
