@@ -25,12 +25,19 @@ Status: in development. It reads Ruby tests today (Minitest, as `it` blocks or `
 
 ## Running it
 
-It needs Ruby 3.4 and git. There is no gem yet, so clone it and run the command from the root of the repository you want checked:
+It needs Ruby 3.4 and git. It is not on RubyGems yet, so build the gem from a clone and install that:
 
 ```shell
 git clone https://github.com/mainline-dev/slopbouncer.git
-cd your-project
-ruby ../slopbouncer/bin/slopbouncer main..HEAD
+cd slopbouncer
+gem build slopbouncer.gemspec
+gem install slopbouncer-0.1.0.gem
+```
+
+Then run it from the root of the repository you want checked:
+
+```shell
+slopbouncer main..HEAD
 ```
 
 The argument is a range of commits. Give one commit instead, such as `HEAD` or `origin/main`, and it checks everything since then, committed or not. It prints one line for each finding:
@@ -45,7 +52,7 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 |---|---|
 | `--json` | Prints the findings as JSON |
 | `--strict` | Exits with 1 when anything is flagged |
-| `--agent` | Runs as a coding agent's stop hook (see below) |
+| `--agent=claude-code` | Runs as that coding agent's stop hook (see below) |
 
 Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
 
@@ -53,25 +60,19 @@ Without `--strict` it exits with 0 whatever it finds: it flags for review and do
 
 Slopbouncer is most use when the agent that made the change hears about it. The agent knows why it changed a test, and it can put the test back.
 
-With `--agent` it runs as a stop hook. When the agent is about to finish and has weakened an existing test, it is stopped once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+One command sets an agent up, from the root of your project:
 
-For Claude Code, add this to `.claude/settings.json` in your project:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": "ruby /path/to/slopbouncer/bin/slopbouncer HEAD --agent" }
-        ]
-      }
-    ]
-  }
-}
+```shell
+slopbouncer install claude-code
 ```
 
-`HEAD` checks the work the agent has not committed. If your agent commits as it goes, name the commit its work started from, such as `origin/main`.
+It adds one hook to `.claude/settings.json` and keeps everything else in the file. Running it again changes nothing. Add `--local` to write to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
+
+When the agent is about to finish and has weakened an existing test, it is stopped once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+
+The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
+
+Claude Code is the one agent it can be set up for today.
 
 An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 

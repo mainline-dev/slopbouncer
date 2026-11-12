@@ -49,6 +49,22 @@ class Driver
     File.write(File.join(@dir, path), source)
   end
 
+  def read(path)
+    File.read(File.join(@dir, path))
+  end
+
+  def exists?(path)
+    File.exist?(File.join(@dir, path))
+  end
+
+  # Runs a command line through a shell in the repository, with the
+  # slopbouncer command on the path as an installed gem would put it.
+  def shell(command, input: '')
+    path = "#{File.dirname(BIN)}#{File::PATH_SEPARATOR}#{ENV.fetch('PATH')}"
+    output, error, status = Open3.capture3({ 'PATH' => path }, 'sh', '-c', command, chdir: @dir, stdin_data: input)
+    Run.new(findings: nil, status: status.exitstatus, output: output, error: error)
+  end
+
   def slopbouncer(*arguments, input: '')
     output, error, status = Open3.capture3(RbConfig.ruby, BIN, *arguments, chdir: @dir, stdin_data: input)
     Run.new(findings: findings_in(output), status: status.exitstatus, output: output, error: error)

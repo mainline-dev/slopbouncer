@@ -2,9 +2,12 @@
 
 require 'json'
 require 'yaml'
+require_relative 'slopbouncer/version'
 require_relative 'slopbouncer/git'
 require_relative 'slopbouncer/ruby_tests'
 require_relative 'slopbouncer/compare'
+require_relative 'slopbouncer/agents'
+require_relative 'slopbouncer/install'
 
 # A static check that flags tests which got weaker in a change, so a person
 # can decide whether that was intended.
@@ -52,8 +55,12 @@ module Slopbouncer
   end
 
   def self.run(arguments, input: $stdin)
-    target = arguments.find { |argument| !argument.start_with?('--') }
-    return stop_hook(target.to_s, input) if arguments.include?('--agent')
+    words = arguments.reject { |argument| argument.start_with?('--') }
+    return install(words.drop(1), arguments) if words.first == 'install'
+
+    target = words.first
+    agent = arguments.find { |argument| argument == '--agent' || argument.start_with?('--agent=') }
+    return stop_hook(target.to_s, input, agent.split('=', 2)[1] || Agents::DEFAULT) if agent
 
     findings = check(target.to_s)
     puts arguments.include?('--json') ? JSON.pretty_generate(findings.map { |finding| finding.to_h.compact }) : report(findings)
@@ -63,29 +70,44 @@ module Slopbouncer
     2
   end
 
+  # Sets a coding agent up in the current directory: slopbouncer install claude-code
+  def self.install(words, arguments)
+    raise Error, "Say which agent to set up: #{Agents::ALL.keys.join(', ')}" if words.empty?
+
+    puts Install.call(words.first, local: arguments.include?('--local'))
+    0
+  rescue Error => e
+    warn e.message
+    2
+  end
+
   # Run as a coding agent's stop hook. The agent is stopped from finishing
-  # once, with what it weakened on standard error, where its harness reads
-  # the reason from. Exit status 2 is what tells the harness to stop it.
-  def self.stop_hook(target, input)
-    return 0 if stopped_before?(input)
+  # once and told what it weakened, in the way its own harness expects. A
+  # mistake in how the hook is set up never stops the agent: it is said on
+  # standard error and the agent is let finish.
+  def self.stop_hook(target, input, agent_name)
+    agent = Agents.named(agent_name)
+    return 0 if agent.stopped_before?(hook_input(input))
 
     findings = check(target)
     return 0 if findings.empty?
 
-    warn to_the_agent(findings)
-    2
+    output, error, status = agent.stop(to_the_agent(findings))
+    print output
+    warn error unless error.empty?
+    status
   rescue Error => e
     warn e.message
     0
   end
 
-  # The harness says on standard input whether this hook has already made
-  # the agent carry on once.
-  def self.stopped_before?(input)
+  # What the agent's harness passes the hook on standard input, if anything.
+  def self.hook_input(input)
     text = input.tty? ? '' : input.read.to_s
-    !text.strip.empty? && JSON.parse(text)['stop_hook_active'] == true
+    parsed = text.strip.empty? ? {} : JSON.parse(text)
+    parsed.is_a?(Hash) ? parsed : {}
   rescue JSON::ParserError
-    false
+    {}
   end
 
   def self.to_the_agent(findings)
@@ -106,5 +128,5 @@ module Slopbouncer
       "#{finding.file}: #{finding.test}: #{finding.rule}: #{what}"
     }.join("\n")
   end
-  private_class_method :deleted, :settings, :stop_hook, :stopped_before?, :to_the_agent
+  private_class_method :deleted, :settings, :install, :stop_hook, :hook_input, :to_the_agent
 end

@@ -45,8 +45,38 @@ module SlopbouncerDSL
 
   # Slopbouncer run the way a coding agent's stop hook runs it: told on
   # standard input whether it has stopped the agent once already.
-  def as_the_agents_stop_hook(stopped_before: false, input: nil)
-    @driver.slopbouncer(@base, '--agent', input: input || JSON.generate('stop_hook_active' => stopped_before))
+  def as_the_agents_stop_hook(stopped_before: false, input: nil, agent: nil)
+    @driver.slopbouncer(@base, agent ? "--agent=#{agent}" : '--agent',
+      input: input || JSON.generate('stop_hook_active' => stopped_before))
+  end
+
+  # Sets an agent up in the repository, as a person would from its root.
+  def install(agent, *flags)
+    @driver.slopbouncer('install', agent, *flags)
+  end
+
+  def have_file(path, content)
+    @driver.write(path, content)
+  end
+
+  def file(path)
+    @driver.read(path)
+  end
+
+  def file_exists?(path)
+    @driver.exists?(path)
+  end
+
+  # The commands a settings file runs when the agent stops.
+  def stop_hooks_in(path)
+    JSON.parse(file(path)).dig('hooks', 'Stop').flat_map { |entry| entry['hooks'].map { |hook| hook['command'] } }
+  end
+
+  # Runs the Slopbouncer hook a settings file holds, the way the agent's
+  # harness would: through a shell, with the command on the path.
+  def run_stop_hook_from(path)
+    command = stop_hooks_in(path).find { |hook| hook.include?('slopbouncer') }
+    @driver.shell(command, input: JSON.generate('stop_hook_active' => false))
   end
 
   def move(from, to)
