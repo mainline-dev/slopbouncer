@@ -1,5 +1,8 @@
 # Slopbouncer
 
+[![Gem version](https://img.shields.io/gem/v/slopbouncer)](https://rubygems.org/gems/slopbouncer)
+[![Test](https://github.com/mainline-dev/slopbouncer/actions/workflows/test.yml/badge.svg)](https://github.com/mainline-dev/slopbouncer/actions/workflows/test.yml)
+
 A static check that flags tests which got weaker in a change.
 
 A coding agent's job is to make the checks pass. One way to do that is to weaken the check. Slopbouncer compares each test before and after a change and reports the ones that lost something, so a person can decide whether that was intended. It reads code and never runs it, so it takes seconds.
