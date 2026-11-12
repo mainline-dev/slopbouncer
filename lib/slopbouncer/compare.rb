@@ -52,17 +52,33 @@ module Slopbouncer
       Finding.new(file: file, test: test.name, rule: 'test_deleted', detail: "#{test.assertions.size} assertions")
     end
 
-    # Pairs each test that has gone with the new test most like it.
+    # Pairs each test that has gone with the new test it became, surest
+    # first: the same body written another way, then the body most like it,
+    # then a one-line test with one value edited. Each new test is taken once.
     def self.reworded(gone, fresh)
       left = fresh.dup
-      gone.filter_map do |was|
-        match = left.max_by { |test| likeness(was, test) }
-        match = left.find { |test| one_edit?(was, test) } unless match && likeness(was, match) >= SAME_TEST
-        next unless match
+      ways = [->(was) { left.find { |test| rewritten?(was, test) } },
+              ->(was) { most_alike(was, left) },
+              ->(was) { left.find { |test| one_edit?(was, test) } }]
+      ways.each_with_object([]) do |way, pairs|
+        without(gone, pairs.map(&:first)).each do |was|
+          match = way.call(was)
+          next unless match
 
-        left.delete_at(left.index { |test| test.equal?(match) })
-        [was, match]
+          left.delete_at(left.index { |test| test.equal?(match) })
+          pairs << [was, match]
+        end
       end
+    end
+
+    # The same body written another way, as a formatter leaves it.
+    def self.rewritten?(was, now)
+      !was.form.nil? && was.form == now.form
+    end
+
+    def self.most_alike(was, tests)
+      match = tests.max_by { |test| likeness(was, test) }
+      match if match && likeness(was, match) >= SAME_TEST
     end
 
     # A one-line test whose only assertion had one value edited is the same
@@ -110,6 +126,6 @@ module Slopbouncer
       differing = was.forms.each_index.reject { |place| was.forms[place] == now.forms[place] }
       [was.arguments[differing.first], now.arguments[differing.first]] if differing.size == 1
     end
-    private_class_method :same_name, :pair, :without, :reworded, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
+    private_class_method :same_name, :pair, :without, :reworded, :rewritten?, :most_alike, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
   end
 end

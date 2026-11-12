@@ -9,7 +9,8 @@ module Slopbouncer
   # It reads the code and never runs it.
   module RubyTests
     # hooked: a hook in one of the test's groups makes an assertion for it.
-    Test = Struct.new(:name, :assertions, :skipped, :body, :hooked, keyword_init: true)
+    # form: what the body parses to, however it is written.
+    Test = Struct.new(:name, :assertions, :skipped, :body, :hooked, :form, keyword_init: true)
     # arguments and source are as written, for showing. forms and form are
     # what the same things parse to, for telling whether anything changed.
     Assertion = Struct.new(:method, :arguments, :source, :forms, :form, keyword_init: true)
@@ -66,7 +67,7 @@ module Slopbouncer
 
       def call(node)
         label = label(node)
-        if unnamed_test?(node) then test(body_of(node.block).join(' '), node.block)
+        if unnamed_test?(node) then test(tidy(node.block.body || node.block), node.block)
         elsif hook?(node) then hook(node)
         elsif !(node.block && label) then node.compact_child_nodes.each { |child| visit(child) }
         elsif GROUPS.include?(node.name) then inside(label, node.block, skipped: marked_skipped?(node)) { visit(node.block) }
@@ -136,7 +137,7 @@ module Slopbouncer
         return if assertions.empty?
 
         @tests << Test.new(name: [*@groups, "#{node.name} hook"].join(' '), assertions: assertions,
-          skipped: @skipping.positive?, body: body_of(node.block), hooked: false)
+          skipped: @skipping.positive?, body: body_of(node.block), hooked: false, form: Form.of(inner(node.block)))
       end
 
       # Whether a group has, among its own lines, a hook that asserts.
@@ -156,7 +157,8 @@ module Slopbouncer
           assertions: assertions_in(calls),
           skipped:    skipped || @skipping.positive? || calls.any? { |call| call.receiver.nil? && SKIPS.include?(call.name) },
           body:       body_of(body),
-          hooked:     @hooked.positive?
+          hooked:     @hooked.positive?,
+          form:       Form.of(inner(body))
         )
       end
 
@@ -230,8 +232,12 @@ module Slopbouncer
 
       # The lines inside a test, without its opening and closing lines.
       def body_of(node)
-        inner = node.is_a?(Prism::BlockNode) ? node.body : node
+        inner = inner(node)
         inner ? inner.slice.lines.map(&:strip).reject(&:empty?) : []
+      end
+
+      def inner(node)
+        node.is_a?(Prism::BlockNode) ? node.body : node
       end
     end
   end

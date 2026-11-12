@@ -82,3 +82,41 @@ describe 'a test that was only reformatted' do
     assert_equal [['expected_value_changed', '/paid/i', '/paid/']], edited
   end
 end
+
+# A spec with no name is known by its body, so a formatter changes what it is
+# called. It is still the same spec.
+describe 'one-line specs with no name that were only reformatted' do
+  include SlopbouncerDSL
+
+  def user_spec(*lines)
+    { 'spec/user_spec.rb' => "RSpec.describe User do\n#{lines.map { |line| "  #{line}\n" }.join}end\n" }
+  end
+
+  it 'are not flagged when only their spacing changes' do
+    given user_spec('it { should     have_key(:name) }', 'it { should     have_key(:email) }')
+    change user_spec('it { should have_key(:name) }', 'it { should have_key(:email) }')
+
+    assert_empty flagged
+  end
+
+  it 'are not flagged when only their quotes change' do
+    given user_spec("it { is_expected.to eq('paid') }", "it { is_expected.to eq('due') }")
+    change user_spec('it { is_expected.to eq("paid") }', 'it { is_expected.to eq("due") }')
+
+    assert_empty flagged
+  end
+
+  it 'are still flagged for the one whose value was edited as it was reformatted' do
+    given user_spec("it { is_expected.to eq('paid') }", "it { is_expected.to eq('due') }")
+    change user_spec('it { is_expected.to eq("paid") }', 'it { is_expected.to eq("late") }')
+
+    assert_equal [['expected_value_changed', "'due'", '"late"']], findings.map { |finding| finding.values_at('rule', 'before', 'after') }
+  end
+
+  it 'are still flagged for the right one when they also change places' do
+    given user_spec("it { is_expected.to eq('due') }", "it { is_expected.to eq('paid') }")
+    change user_spec('it { is_expected.to eq("paid") }', 'it { is_expected.to eq("late") }')
+
+    assert_equal [['expected_value_changed', "'due'", '"late"']], findings.map { |finding| finding.values_at('rule', 'before', 'after') }
+  end
+end
