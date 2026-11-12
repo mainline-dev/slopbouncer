@@ -19,7 +19,7 @@ module SlopbouncerDSL
   end
 
   # The one test file most scenarios talk about.
-  def test_file
+  def the_test_file
     TEST_FILE
   end
 

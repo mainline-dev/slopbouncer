@@ -86,7 +86,7 @@ describe 'the command' do
     lines = plain_report.lines
 
     assert_equal 1, lines.size
-    assert_includes lines.first, test_file
+    assert_includes lines.first, the_test_file
   end
 
   it 'says what an edited value was and what it is now' do

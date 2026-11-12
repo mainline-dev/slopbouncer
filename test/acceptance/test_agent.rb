@@ -19,9 +19,9 @@ describe 'work an agent has not committed' do
   end
 
   it 'is checked together with what has been committed since the base' do
-    given(test_file => basket('assert_equal 5, total', 'assert_equal 2, size'),
+    given(the_test_file => basket('assert_equal 5, total', 'assert_equal 2, size'),
       'test/test_refund.rb' => "describe 'Refund' do\n  it 'refunds' do\n    assert_equal 100, amount\n  end\nend\n")
-    change(test_file => basket('assert_equal 5, total'))
+    change(the_test_file => basket('assert_equal 5, total'))
     edit_without_committing('test/test_refund.rb' => "describe 'Refund' do\n  it 'refunds' do\n    assert_equal 90, amount\n  end\nend\n")
 
     assert_equal [['Basket adds up', 'assertion_removed'], ['Refund refunds', 'expected_value_changed']], flagged_since_base.sort
@@ -50,7 +50,7 @@ describe 'an agent about to finish' do
 
     assert_equal 2, told.status
     assert_includes told.error, 'Basket adds up'
-    assert_includes told.error, test_file
+    assert_includes told.error, the_test_file
   end
 
   it 'is told on the channel the agent reads, with nothing on the other' do

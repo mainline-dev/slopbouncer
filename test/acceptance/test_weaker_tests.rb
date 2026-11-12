@@ -29,7 +29,7 @@ describe 'a test that got weaker' do
   end
 
   it 'is not flagged when a test is added along with new code' do
-    given(test_file => <<~RUBY, 'lib/basket.rb' => "class Basket; end\n")
+    given(the_test_file => <<~RUBY, 'lib/basket.rb' => "class Basket; end\n")
       describe 'Basket' do
         it 'adds up the items' do
           assert_equal 5, Basket.new(2, 3).total
@@ -37,7 +37,7 @@ describe 'a test that got weaker' do
       end
     RUBY
 
-    change(test_file => <<~RUBY, 'lib/basket.rb' => "class Basket; def empty? = true; end\n")
+    change(the_test_file => <<~RUBY, 'lib/basket.rb' => "class Basket; def empty? = true; end\n")
       describe 'Basket' do
         it 'adds up the items' do
           assert_equal 5, Basket.new(2, 3).total
@@ -83,7 +83,7 @@ describe 'the other ways a test gets weaker' do
 
   it 'is flagged when its whole file is deleted' do
     given basket_test('assert_equal 5, Basket.new(2, 3).total')
-    change(test_file => nil)
+    change(the_test_file => nil)
 
     assert_equal [['Basket adds up the items', 'test_deleted']], flagged
   end
@@ -125,7 +125,7 @@ describe 'the other ways a test gets weaker' do
 
   it 'is not flagged for being moved to another file' do
     given basket_test('assert_equal 5, Basket.new(2, 3).total')
-    move test_file, 'test/models/test_basket.rb'
+    move the_test_file, 'test/models/test_basket.rb'
 
     assert_empty flagged
   end

@@ -4,7 +4,7 @@ A static check that flags tests which got weaker in a change.
 
 A coding agent's job is to make the checks pass. One way to do that is to weaken the check. Slopbouncer compares each test before and after a change and reports the ones that lost something, so a person can decide whether that was intended. It reads code and never runs it, so it takes seconds.
 
-Status: in development. It reads Ruby tests today (Minitest, as `it` blocks or `test_` methods).
+Status: in development. It reads Ruby tests today: Minitest, as `it` blocks or `test_` methods, and RSpec.
 
 ## What it flags
 
@@ -82,6 +82,15 @@ Claude Code is the one this has been run under. The Cursor, Gemini CLI and Codex
 
 An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 
+## RSpec
+
+An expectation is read whole: its subject, its direction and its matcher. For a plain matcher such as `eq(5)` an edited value shows as `5 → 6`. For a matcher built from several calls, such as `change { total }.by(1)`, the whole matcher is shown before and after.
+
+- A spec with no name, such as `it { is_expected.to be_valid }`, is known by its body.
+- `:skip`, `:pending`, `skip: 'reason'` and `pending: 'reason'` beside a spec's or a group's name count as skipping it.
+- A `before`, `after` or `around` hook that makes an expectation is read as a test of its own, named after its group. The specs in that group are not reported as asserting nothing.
+- `should` and `should_not` are read as expectations too.
+
 ## Your own assertion helpers
 
 Slopbouncer counts calls such as `assert_equal`, `refute_nil`, `must_equal` and `expect` as assertions. If your tests assert through helpers of your own, name them in `.slopbouncer.yml` at the root of your repository:
@@ -98,6 +107,8 @@ A test that only calls helpers Slopbouncer has not been told about looks like a 
 
 - It catches tests that are visibly weaker. A test that looks thorough and checks nothing needs mutation testing, which is slower and runs the code. Use both: Slopbouncer on every change, mutation testing behind it.
 - It cannot tell a stronger assertion from a weaker one. An assertion swapped for another kind is reported as removed.
+- It compares assertions as they are written. A value rewritten in another style, such as `{ a: 1 }` to `a: 1`, is flagged as edited.
+- It reads one file at a time. A check that lives elsewhere, such as an RSpec shared example pulled in with `it_behaves_like`, is not followed, so a test that relies on one can look as if it asserts nothing.
 - It cannot see intent. A test changed on purpose, because the behaviour changed, is flagged the same way as one weakened to get a build to pass.
 
 On its first run, over the 706 commits in [Mainline](https://mainline.dev)'s history that touch a test, it flagged 210 of them. In a sample of those, every finding was a real change to a test and every one looked intended. So read a finding as "this test changed in a way worth a look".

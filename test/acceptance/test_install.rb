@@ -140,7 +140,7 @@ describe 'setting up Cursor' do
 
     assert_equal 0, sent.status
     assert_includes JSON.parse(sent.output).fetch('followup_message'), 'Basket adds up'
-    assert_includes JSON.parse(sent.output).fetch('followup_message'), test_file
+    assert_includes JSON.parse(sent.output).fetch('followup_message'), the_test_file
   end
 
   it 'sends the agent back once only' do

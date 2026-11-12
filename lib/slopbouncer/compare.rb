@@ -34,11 +34,20 @@ module Slopbouncer
       left = fresh.dup
       gone.filter_map do |was|
         match = left.max_by { |test| likeness(was, test) }
-        next unless match && likeness(was, match) >= SAME_TEST
+        match = left.find { |test| one_edit?(was, test) } unless match && likeness(was, match) >= SAME_TEST
+        next unless match
 
         left.delete(match)
         [was, match]
       end
+    end
+
+    # A one-line test whose only assertion had one value edited is the same
+    # test. This is how a test with no name of its own is followed:
+    # it { is_expected.to eq(5) } edited to expect 6.
+    def self.one_edit?(was, now)
+      [was, now].all? { |test| test.body.size == 1 && test.assertions.size == 1 } &&
+        !edited_value(was.assertions.first, now.assertions.first).nil?
     end
 
     def self.likeness(was, now)
@@ -60,8 +69,14 @@ module Slopbouncer
         finding.call('expected_value_changed', detail: edit.source, before: before, after: after)
       end
       found << finding.call('skip_added', detail: 'marked to be skipped') if now.skipped && !was.skipped
-      found << finding.call('no_assertions', detail: 'asserts nothing') if now.assertions.empty? && was.body != now.body
+      found << finding.call('no_assertions', detail: 'asserts nothing') if asserts_nothing?(now) && was.body != now.body
       found
+    end
+
+    # A test with no assertions of its own still asserts when a hook in its
+    # group does it for it.
+    def self.asserts_nothing?(test)
+      test.assertions.empty? && !test.hooked
     end
 
     # The one argument that differs between two calls of the same assertion,
@@ -72,6 +87,6 @@ module Slopbouncer
       differing = was.arguments.zip(now.arguments).reject { |before, after| before == after }
       differing.first if differing.size == 1
     end
-    private_class_method :reworded, :likeness, :weaker, :edited_value
+    private_class_method :reworded, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
   end
 end
