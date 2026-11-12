@@ -14,10 +14,14 @@ Gem::Specification.new do |spec|
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2'
 
-  spec.files = Dir['lib/**/*.rb', 'bin/slopbouncer', 'LICENSE', 'README.md']
+  spec.files = Dir['lib/**/*.rb', 'bin/slopbouncer', 'LICENSE', 'README.md', 'CHANGELOG.md']
   spec.bindir = 'bin'
   spec.executables = ['slopbouncer']
 
   spec.add_dependency 'prism', '>= 1.5', '< 3'
   spec.metadata['rubygems_mfa_required'] = 'true'
+  spec.metadata['homepage_uri'] = 'https://slopbouncer.com'
+  spec.metadata['source_code_uri'] = 'https://github.com/mainline-dev/slopbouncer'
+  spec.metadata['bug_tracker_uri'] = 'https://github.com/mainline-dev/slopbouncer/issues'
+  spec.metadata['changelog_uri'] = 'https://github.com/mainline-dev/slopbouncer/blob/master/CHANGELOG.md'
 end
