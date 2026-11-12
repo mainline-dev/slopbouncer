@@ -10,7 +10,7 @@ require 'tmpdir'
 class Driver
   BIN = File.expand_path('../../bin/slopbouncer', __dir__)
 
-  Run = Struct.new(:findings, :status, :output, keyword_init: true)
+  Run = Struct.new(:findings, :status, :output, :error, keyword_init: true)
 
   def initialize
     @dir = Dir.mktmpdir('slopbouncer')
@@ -45,12 +45,13 @@ class Driver
   end
 
   def write(path, source)
+    FileUtils.mkdir_p(File.dirname(File.join(@dir, path)))
     File.write(File.join(@dir, path), source)
   end
 
-  def slopbouncer(*arguments)
-    output, status = Open3.capture2e(RbConfig.ruby, BIN, *arguments, chdir: @dir)
-    Run.new(findings: findings_in(output), status: status.exitstatus, output: output)
+  def slopbouncer(*arguments, input: '')
+    output, error, status = Open3.capture3(RbConfig.ruby, BIN, *arguments, chdir: @dir, stdin_data: input)
+    Run.new(findings: findings_in(output), status: status.exitstatus, output: output, error: error)
   end
 
   private

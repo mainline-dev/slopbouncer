@@ -33,7 +33,7 @@ cd your-project
 ruby ../slopbouncer/bin/slopbouncer main..HEAD
 ```
 
-The argument is a range of commits. It prints one line for each finding:
+The argument is a range of commits. Give one commit instead, such as `HEAD` or `origin/main`, and it checks everything since then, committed or not. It prints one line for each finding:
 
 ```
 test/basket_test.rb: Basket applies a voucher: skip_added: marked to be skipped
@@ -45,8 +45,35 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 |---|---|
 | `--json` | Prints the findings as JSON |
 | `--strict` | Exits with 1 when anything is flagged |
+| `--agent` | Runs as a coding agent's stop hook (see below) |
 
-Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is not given a range.
+Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
+
+## Feeding it back to a coding agent
+
+Slopbouncer is most use when the agent that made the change hears about it. The agent knows why it changed a test, and it can put the test back.
+
+With `--agent` it runs as a stop hook. When the agent is about to finish and has weakened an existing test, it is stopped once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+
+For Claude Code, add this to `.claude/settings.json` in your project:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "ruby /path/to/slopbouncer/bin/slopbouncer HEAD --agent" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`HEAD` checks the work the agent has not committed. If your agent commits as it goes, name the commit its work started from, such as `origin/main`.
+
+An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 
 ## Your own assertion helpers
 

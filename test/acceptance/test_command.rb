@@ -96,8 +96,8 @@ describe 'the command' do
     assert_match(/expected_value_changed: 100 → 90\z/, plain_report.strip)
   end
 
-  it 'says so and stops when not given a range of commits' do
-    assert_equal 2, slopbouncer_with('HEAD').status
+  it 'says so and stops when given nothing to compare' do
+    assert_equal 2, slopbouncer_with('--json').status
   end
 
   it 'reads a test file it cannot fully parse as far as it can, without stopping' do

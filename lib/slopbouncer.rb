@@ -17,10 +17,13 @@ module Slopbouncer
 
   TEST_FILE = %r{(\A|/)(test|spec)/.*\.rb\z|(\A|/)(test_[^/]*|[^/]*_(test|spec))\.rb\z}
 
-  # The findings for the commits in a range such as main..HEAD.
-  def self.check(range)
-    base, head = range.split('..', 2)
-    raise Error, 'Give a range of commits, such as main..HEAD' if base.to_s.empty? || head.to_s.empty?
+  USAGE = 'Give a range of commits, such as main..HEAD, or one commit to compare the working tree with, such as HEAD'
+
+  # The findings for the commits in a range such as main..HEAD, or for
+  # everything since one commit, committed or not, when given just that.
+  def self.check(target)
+    base, head = target.split('..', 2)
+    raise Error, USAGE if base.to_s.empty? || (target.include?('..') && head.to_s.empty?)
 
     helpers = settings.fetch('assertions', [])
     results = Git.changed(base, head).filter_map do |changed|
@@ -48,14 +51,53 @@ module Slopbouncer
     raise Error, "#{CONFIG} could not be read: #{e.message}"
   end
 
-  def self.run(arguments)
-    range = arguments.find { |argument| !argument.start_with?('--') }
-    findings = check(range.to_s)
+  def self.run(arguments, input: $stdin)
+    target = arguments.find { |argument| !argument.start_with?('--') }
+    return stop_hook(target.to_s, input) if arguments.include?('--agent')
+
+    findings = check(target.to_s)
     puts arguments.include?('--json') ? JSON.pretty_generate(findings.map { |finding| finding.to_h.compact }) : report(findings)
     arguments.include?('--strict') && findings.any? ? 1 : 0
   rescue Error => e
     warn e.message
     2
+  end
+
+  # Run as a coding agent's stop hook. The agent is stopped from finishing
+  # once, with what it weakened on standard error, where its harness reads
+  # the reason from. Exit status 2 is what tells the harness to stop it.
+  def self.stop_hook(target, input)
+    return 0 if stopped_before?(input)
+
+    findings = check(target)
+    return 0 if findings.empty?
+
+    warn to_the_agent(findings)
+    2
+  rescue Error => e
+    warn e.message
+    0
+  end
+
+  # The harness says on standard input whether this hook has already made
+  # the agent carry on once.
+  def self.stopped_before?(input)
+    text = input.tty? ? '' : input.read.to_s
+    !text.strip.empty? && JSON.parse(text)['stop_hook_active'] == true
+  rescue JSON::ParserError
+    false
+  end
+
+  def self.to_the_agent(findings)
+    <<~MESSAGE
+      Slopbouncer: this change weakens #{findings.size} existing #{findings.size == 1 ? 'test' : 'tests'}.
+
+      #{report(findings)}
+
+      For each one, do one of two things before you finish:
+      1. Put the test back as it was, and make the code pass it.
+      2. Leave the change, and tell the person which behaviour changed and why the test had to change with it.
+    MESSAGE
   end
 
   def self.report(findings)
@@ -64,5 +106,5 @@ module Slopbouncer
       "#{finding.file}: #{finding.test}: #{finding.rule}: #{what}"
     }.join("\n")
   end
-  private_class_method :deleted, :settings
+  private_class_method :deleted, :settings, :stop_hook, :stopped_before?, :to_the_agent
 end

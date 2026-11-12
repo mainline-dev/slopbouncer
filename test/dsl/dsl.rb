@@ -33,6 +33,22 @@ module SlopbouncerDSL
     @driver.commit(normalise(files))
   end
 
+  # A change left in the working tree, as an agent leaves its work.
+  def edit_without_committing(files)
+    normalise(files).each { |path, source| @driver.write(path, source) }
+  end
+
+  # What Slopbouncer flags in everything since the base, committed or not.
+  def flagged_since_base
+    @driver.slopbouncer(@base, '--json').findings.map { |finding| finding.values_at('test', 'rule') }
+  end
+
+  # Slopbouncer run the way a coding agent's stop hook runs it: told on
+  # standard input whether it has stopped the agent once already.
+  def as_the_agents_stop_hook(stopped_before: false, input: nil)
+    @driver.slopbouncer(@base, '--agent', input: input || JSON.generate('stop_hook_active' => stopped_before))
+  end
+
   def move(from, to)
     @driver.move(from, to)
   end
