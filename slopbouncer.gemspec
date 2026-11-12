@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.authors = ['Kipple Pty Ltd']
   spec.homepage = 'https://github.com/mainline-dev/slopbouncer'
   spec.license = 'MIT'
-  spec.required_ruby_version = '>= 3.4'
+  spec.required_ruby_version = '>= 3.2'
 
   spec.files = Dir['lib/**/*.rb', 'bin/slopbouncer', 'LICENSE', 'README.md']
   spec.bindir = 'bin'

@@ -25,7 +25,7 @@ Status: in development. It reads Ruby tests today: Minitest, as `it` blocks or `
 
 ## Running it
 
-It needs Ruby 3.4 and git.
+It needs Ruby 3.2 or later and git.
 
 ```shell
 gem install slopbouncer
