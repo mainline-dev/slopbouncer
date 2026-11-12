@@ -108,7 +108,7 @@ module Slopbouncer
         finding.call('expected_value_changed', detail: edit.source, before: before, after: after)
       end
       found << finding.call('skip_added', detail: 'marked to be skipped') if now.skipped && !was.skipped
-      found << finding.call('no_assertions', detail: 'asserts nothing') if asserts_nothing?(now) && was.body != now.body
+      found << finding.call('no_assertions', detail: 'asserts nothing') if asserts_nothing?(now) && was.form != now.form
       found
     end
 

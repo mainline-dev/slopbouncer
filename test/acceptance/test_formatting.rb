@@ -61,6 +61,20 @@ describe 'a test that was only reformatted' do
     assert_empty flagged
   end
 
+  it 'is not said to assert nothing when it asserts nothing and was only reformatted' do
+    given order_test("order.pay('card')")
+    change order_test('order.pay("card")')
+
+    assert_empty flagged
+  end
+
+  it 'is still said to assert nothing when it asserts nothing and what it does changes' do
+    given order_test("order.pay('card')")
+    change order_test("order.pay('cash')")
+
+    assert_equal [['Order is paid', 'no_assertions']], flagged
+  end
+
   it 'is still flagged when the quotes and the value both change, showing both as written' do
     given order_test("assert_equal 'paid', order.status")
     change order_test('assert_equal "refunded", order.status')
