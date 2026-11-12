@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'minitest/autorun'
 require 'open3'
+require 'tmpdir'
 require 'yaml'
 require_relative '../../lib/slopbouncer/version'
 
@@ -54,5 +56,61 @@ describe 'releasing the gem' do
     assert_equal 'write', workflow.dig('jobs', 'gem', 'permissions', 'id-token')
     assert position('rubygems/configure-rubygems-credentials@')
     refute_includes File.read(RELEASE), 'secrets.'
+  end
+end
+
+# Moving the version on is one command, so the number is never typed by hand
+# and the tag to push is spelled out.
+describe 'moving the version on' do
+  ROOT_OF_GEM = File.expand_path('../..', __dir__)
+  VERSION_FILE = 'lib/slopbouncer/version.rb'
+
+  # A copy of the gem's rake tasks beside a version file of its own, so the
+  # real version is left alone.
+  before do
+    @copy = Dir.mktmpdir('slopbouncer-release')
+    FileUtils.mkdir_p(File.join(@copy, File.dirname(VERSION_FILE)))
+    FileUtils.cp(File.join(ROOT_OF_GEM, 'Rakefile'), @copy)
+    File.write(File.join(@copy, VERSION_FILE), "# frozen_string_literal: true\n\nmodule Slopbouncer\n  VERSION = '1.2.3'\nend\n")
+  end
+
+  after { FileUtils.remove_entry(@copy) }
+
+  def rake(task, tag: nil)
+    environment = { 'BUNDLE_GEMFILE' => File.join(ROOT_OF_GEM, 'Gemfile'), 'GITHUB_REF_NAME' => tag }
+    output, status = Open3.capture2e(environment, 'bundle', 'exec', 'rake', task, chdir: @copy)
+    [status.exitstatus, output]
+  end
+
+  def version
+    File.read(File.join(@copy, VERSION_FILE))[/VERSION = '(.*)'/, 1]
+  end
+
+  it 'moves to the next patch version' do
+    rake('bump:patch')
+
+    assert_equal '1.2.4', version
+  end
+
+  it 'moves to the next minor version, starting its patches again' do
+    rake('bump:minor')
+
+    assert_equal '1.3.0', version
+  end
+
+  it 'moves to the next major version, starting the rest again' do
+    rake('bump:major')
+
+    assert_equal '2.0.0', version
+  end
+
+  it 'says which tag to push for the new version' do
+    assert_includes rake('bump:minor').last, 'git tag v1.3.0'
+  end
+
+  it 'leaves a version the release accepts under that tag' do
+    rake('bump:minor')
+
+    assert_equal 0, rake('tag_matches_version', tag: 'v1.3.0').first
   end
 end

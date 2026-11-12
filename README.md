@@ -124,11 +124,10 @@ The tests are scenarios. Each one builds a throwaway git repository, makes a cha
 
 ## Releasing
 
-Change the version in `lib/slopbouncer/version.rb` and commit. Then tag that commit with the same version and push the tag:
+Move the version on with `rake bump:patch`, `rake bump:minor` or `rake bump:major`, and commit. Then tag that commit with the same version and push the tag, as the command tells you:
 
 ```shell
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 GitHub runs the scenarios and publishes the gem to RubyGems. A tag that does not match the version is refused before anything is published.
