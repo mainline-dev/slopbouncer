@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slopbouncer: flags tests that got weaker</title>
+<meta name="description" content="A static, diff-aware check for code written by coding agents. Slopbouncer compares each test before and after a change and flags the ones that got weaker.">
+<meta property="og:title" content="Slopbouncer: flags tests that got weaker">
+<meta property="og:description" content="A static, diff-aware check for code written by coding agents.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://slopbouncer.com/">
+<style>
+  :root { --bg:#0b0c10; --panel:#12141a; --line:#232733; --text:#e8e8ea; --muted:#9a9db0; --accent:#5bd0ff; --ok:#5fd38a; --warn:#ffb454; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 72px 20px 48px; }
+  .eyebrow { font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); }
+  h1 { font: 400 clamp(38px, 7vw, 60px)/1.08 Georgia, "Times New Roman", serif; margin: 18px 0 20px; }
+  h1 b { font-weight:400; color:var(--accent); }
+  h2 { font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin: 48px 0 14px; }
+  p { margin: 0 0 16px; color: var(--muted); }
+  p.lead { color: var(--text); font-size: 19px; }
+  ul { margin: 0; padding: 0; list-style: none; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+  li { padding: 12px 16px; border-top:1px solid var(--line); color:var(--text); }
+  li:first-child { border-top:0; }
+  li span { color: var(--muted); }
+  pre { margin:0; padding:16px; overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line); border-radius:8px; background:var(--panel); font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
+  .w { color: var(--warn); } .o { color: var(--ok); } .d { color: var(--muted); }
+  .actions { margin-top: 28px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  a.btn { display:inline-block; padding: 12px 18px; border-radius:6px; background:var(--accent); color:#06222d; font-weight:600; text-decoration:none; }
+  .status { font: 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+  footer { margin-top: 64px; padding-top: 20px; border-top:1px solid var(--line); font-size: 14px; color: var(--muted); }
+  footer a, p a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">A check for code written by coding agents</div>
+  <h1>Slopbouncer flags tests that got <b>weaker</b>.</h1>
+  <p class="lead">A coding agent's job is to make the checks pass. One way to do that is to weaken the check. Slopbouncer compares every test before and after a change and tells you which ones lost something.</p>
+  <p>It reads code and never runs it, so it takes seconds and is safe to put in any pipeline.</p>
+
+  <div class="actions">
+    <a class="btn" href="https://github.com/mainline-dev/slopbouncer">View on GitHub</a>
+    <span class="status">Status: in development. Reads Ruby tests first.</span>
+  </div>
+
+  <h2>What it flags</h2>
+  <ul>
+    <li>An assertion removed from an existing test</li>
+    <li>An expected value edited</li>
+    <li>A test deleted, skipped or marked pending</li>
+    <li>A test left with no assertions at all</li>
+  </ul>
+
+  <h2>What it leaves alone</h2>
+  <ul>
+    <li>New tests added with new code <span>(that is what test-driven development looks like)</span></li>
+    <li>Tests that gained assertions</li>
+    <li>Renamed or moved tests whose checks are unchanged</li>
+  </ul>
+
+  <h2>What a report looks like</h2>
+<pre><span class="d">$ slopbouncer main..HEAD</span>
+
+test/basket_test.rb: Basket applies a voucher: <span class="w">skip_added</span>: marked to be skipped
+test/checkout_test.rb: Checkout lets a guest pay: <span class="w">assertion_removed</span>: assert_equal "paid", order.status
+test/refund_test.rb: Refund refunds part of an order: <span class="w">expected_value_changed</span>: 100 → 90</pre>
+
+  <h2>Its limits</h2>
+  <p>Slopbouncer catches tests that are visibly weaker. A test that looks thorough and checks nothing needs mutation testing, which is slower and runs the code. Use both: Slopbouncer on every change, mutation testing behind it.</p>
+  <p>It flags changes for a person to review. It does not block a merge unless you ask it to.</p>
+
+  <footer>
+    Slopbouncer is open source, from the makers of <a href="https://mainline.dev">Mainline</a>. © 2026 Kipple Pty Ltd.
+  </footer>
+</main>
+</body>
+</html>
