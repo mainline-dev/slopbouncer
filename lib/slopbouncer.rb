@@ -21,6 +21,9 @@ module Slopbouncer
 
   TEST_FILE = %r{(\A|/)(test|spec)/.*\.rb\z|(\A|/)(test_[^/]*|[^/]*_(test|spec))\.rb\z}
 
+  # How many findings a coding agent is told about in full.
+  TOLD_TO_AN_AGENT = 20
+
   USAGE = 'Give a range of commits, such as main..HEAD, or one commit to compare the working tree with, such as HEAD'
 
   # The findings for the commits in a range such as main..HEAD, or for
@@ -73,14 +76,15 @@ module Slopbouncer
 
   # JSON when asked for it. Otherwise laid out for a person when the output is
   # a terminal or colour is asked for, and one plain line for each finding
-  # when it goes to another program.
+  # when it goes to another program. What a program reads is always complete;
+  # what a person reads is counted up when it is long, unless they ask for all.
   def self.printed(findings, arguments)
     return JSON.pretty_generate(findings.map { |finding| finding.to_h.compact }) if arguments.include?('--json')
 
     asked = arguments.intersect?(%w[--color --colour])
     return report(findings) unless asked || $stdout.tty?
 
-    TerminalReport.call(findings, colour: asked || ENV['NO_COLOR'].to_s.empty?)
+    TerminalReport.call(findings, colour: asked || ENV['NO_COLOR'].to_s.empty?, all: arguments.include?('--all'))
   end
 
   # Sets a coding agent up in the current directory: slopbouncer install claude-code
@@ -106,7 +110,7 @@ module Slopbouncer
     findings = Dir.chdir(working_directory(told)) { check(target) }
     return 0 if findings.empty?
 
-    output, error, status = agent.block(to_the_agent(findings))
+    output, error, status = agent.block(to_the_agent(findings, target))
     print output
     warn error unless error.empty?
     status
@@ -131,12 +135,16 @@ module Slopbouncer
     {}
   end
 
-  def self.to_the_agent(findings)
+  # A coding agent is told about the first few findings, since a mechanical
+  # rewrite can make hundreds, and how to list the rest.
+  def self.to_the_agent(findings, target)
+    more = findings.size - TOLD_TO_AN_AGENT
+    rest = "\nand #{more} more. Run `slopbouncer #{target}` to list them all.\n" if more.positive?
     <<~MESSAGE
       Slopbouncer: this change weakens #{findings.size} existing #{findings.size == 1 ? 'test' : 'tests'}.
 
-      #{report(findings)}
-
+      #{report(findings.first(TOLD_TO_AN_AGENT))}
+      #{rest}
       For each one, do one of two things before you finish:
       1. Put the test back as it was, and make the code pass it.
       2. Leave the change, and tell the person which behaviour changed and why the test had to change with it.

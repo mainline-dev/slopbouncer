@@ -67,6 +67,7 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 |---|---|
 | `--json` | Prints the findings as JSON |
 | `--strict` | Exits with 1 when anything is flagged |
+| `--all` | At a terminal, lists every finding. Without it, more than 30 findings are shown as a count of each rule in each file |
 | `--color` | Uses the terminal layout, in colour, wherever the output goes. For a script whose own output a person reads |
 | `--agent=NAME` | Runs as that coding agent's hook (see below) |
 
@@ -91,7 +92,7 @@ slopbouncer install claude-code
 
 It adds one hook and keeps everything else in the file. Running it again changes nothing. For Claude Code, `--local` writes to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
 
-When the agent is about to finish and has weakened an existing test, it is sent back once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+When the agent is about to finish and has weakened an existing test, it is sent back once and told which tests (the first 20, and how to list the rest), with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
 
 The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
 
