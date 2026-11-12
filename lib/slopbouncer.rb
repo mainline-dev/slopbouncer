@@ -59,6 +59,9 @@ module Slopbouncer
   end
 
   def self.run(arguments, input: $stdin)
+    return said(help) if arguments.intersect?(%w[--help -h])
+    return said("slopbouncer #{VERSION}") if arguments.intersect?(%w[--version -v])
+
     words = arguments.reject { |argument| argument.start_with?('--') }
     return install(words.drop(1), arguments) if words.first == 'install'
 
@@ -72,6 +75,32 @@ module Slopbouncer
   rescue Error => e
     warn e.message
     2
+  end
+
+  def self.said(text)
+    puts text
+    0
+  end
+
+  def self.help
+    <<~HELP
+      Slopbouncer flags tests that got weaker in a change. It reads the code and never runs it.
+
+      Usage:
+        slopbouncer main..HEAD       the commits in a range
+        slopbouncer HEAD             everything since one commit, committed or not
+        slopbouncer install AGENT    set up a coding agent's hook: #{Agents::ALL.keys.join(', ')}
+
+      Options:
+        --json           print the findings as JSON
+        --strict         exit with 1 when anything is flagged
+        --all            at a terminal, list every finding however many there are
+        --color          use the terminal layout, in colour, wherever the output goes
+        --agent=NAME     run as that coding agent's hook
+        --local          with install claude-code, keep the hook out of the shared settings
+        -h, --help       print this
+        -v, --version    print the version
+    HELP
   end
 
   # JSON when asked for it. Otherwise laid out for a person when the output is
@@ -157,5 +186,5 @@ module Slopbouncer
       "#{finding.file}: #{finding.test}: #{finding.rule}: #{what}"
     }.join("\n")
   end
-  private_class_method :deleted, :settings, :printed, :install, :stop_hook, :working_directory, :hook_input, :to_the_agent
+  private_class_method :deleted, :settings, :said, :help, :printed, :install, :stop_hook, :working_directory, :hook_input, :to_the_agent
 end

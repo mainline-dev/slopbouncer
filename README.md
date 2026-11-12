@@ -70,6 +70,8 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 | `--all` | At a terminal, lists every finding. Without it, more than 30 findings are shown as a count of each rule in each file |
 | `--color` | Uses the terminal layout, in colour, wherever the output goes. For a script whose own output a person reads |
 | `--agent=NAME` | Runs as that coding agent's hook (see below) |
+| `--help`, `-h` | Prints how to use it |
+| `--version`, `-v` | Prints the version |
 
 Setting `NO_COLOR` keeps the terminal layout and leaves the colour out. Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
 

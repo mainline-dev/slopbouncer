@@ -107,3 +107,40 @@ describe 'the command' do
     assert_equal 0, run_slopbouncer.status
   end
 end
+
+describe 'asking the command about itself' do
+  include SlopbouncerDSL
+
+  OPTIONS = %w[--json --strict --all --color --agent --help --version].freeze
+
+  def version
+    File.read(File.expand_path('../../lib/slopbouncer/version.rb', __dir__))[/VERSION = '(.*)'/, 1]
+  end
+
+  it 'prints how to use it, with every option, when asked for help' do
+    help = slopbouncer_with('--help')
+
+    assert_equal 0, help.status
+    assert_includes help.output, 'slopbouncer main..HEAD'
+    assert_includes help.output, 'slopbouncer install'
+    assert_empty(OPTIONS.reject { |option| help.output.include?(option) })
+  end
+
+  it 'prints the same for -h' do
+    assert_equal slopbouncer_with('--help').output, slopbouncer_with('-h').output
+    assert_equal 0, slopbouncer_with('-h').status
+  end
+
+  it 'prints its version when asked' do
+    asked = slopbouncer_with('--version')
+
+    assert_equal 0, asked.status
+    assert_includes asked.output, version
+    assert_equal 1, asked.output.lines.size
+  end
+
+  it 'prints the same for -v' do
+    assert_equal slopbouncer_with('--version').output, slopbouncer_with('-v').output
+    assert_equal 0, slopbouncer_with('-v').status
+  end
+end
