@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'prism'
+require_relative 'form'
 
 module Slopbouncer
   # Reads a Ruby test file into a table of its tests: each test's full name,
@@ -9,7 +10,9 @@ module Slopbouncer
   module RubyTests
     # hooked: a hook in one of the test's groups makes an assertion for it.
     Test = Struct.new(:name, :assertions, :skipped, :body, :hooked, keyword_init: true)
-    Assertion = Struct.new(:method, :arguments, :source, keyword_init: true)
+    # arguments and source are as written, for showing. forms and form are
+    # what the same things parse to, for telling whether anything changed.
+    Assertion = Struct.new(:method, :arguments, :source, :forms, :form, keyword_init: true)
 
     GROUPS = %i[describe context feature shared_examples shared_examples_for shared_context].freeze
     SKIPPED_GROUPS = %i[xdescribe xcontext xfeature].freeze
@@ -180,8 +183,7 @@ module Slopbouncer
       end
 
       def assertion(node)
-        Assertion.new(method: node.name.to_s, arguments: node.arguments&.arguments.to_a.map { |argument| tidy(argument) },
-          source: tidy(node))
+        made(node, node.name.to_s, node.arguments&.arguments.to_a)
       end
 
       def expectation?(call)
@@ -200,11 +202,13 @@ module Slopbouncer
         matcher = node.arguments&.arguments&.first
         plain = matcher.is_a?(Prism::CallNode) && matcher.receiver.nil? && matcher.block.nil?
         expected = plain ? matcher.arguments&.arguments.to_a : [matcher].compact
-        Assertion.new(
-          method:    [(node.receiver.name if about_a_subject?(node)), node.name, (matcher.name if plain)].compact.join(' '),
-          arguments: (subject_of(node) + expected).map { |part| tidy(part) },
-          source:    tidy(node)
-        )
+        made(node, [(node.receiver.name if about_a_subject?(node)), node.name, (matcher.name if plain)].compact.join(' '),
+          subject_of(node) + expected)
+      end
+
+      def made(node, method, parts)
+        Assertion.new(method: method, arguments: parts.map { |part| tidy(part) }, source: tidy(node),
+          forms: parts.map { |part| Form.of(part) }, form: Form.of(node))
       end
 
       def about_a_subject?(node)

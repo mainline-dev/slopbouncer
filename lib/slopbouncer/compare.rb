@@ -81,8 +81,8 @@ module Slopbouncer
 
     def self.weaker(file, was, now)
       finding = ->(rule, **rest) { Finding.new(file: file, test: now.name, rule: rule, **rest) }
-      lost = was.assertions.reject { |assertion| now.assertions.map(&:source).include?(assertion.source) }
-      gained = now.assertions.reject { |assertion| was.assertions.map(&:source).include?(assertion.source) }
+      lost = was.assertions.reject { |assertion| now.assertions.map(&:form).include?(assertion.form) }
+      gained = now.assertions.reject { |assertion| was.assertions.map(&:form).include?(assertion.form) }
       found = lost.map do |assertion|
         edit = gained.find { |other| edited_value(assertion, other) }
         next finding.call('assertion_removed', detail: assertion.source) unless edit
@@ -107,8 +107,8 @@ module Slopbouncer
     def self.edited_value(was, now)
       return unless was.method == now.method && was.arguments.size == now.arguments.size
 
-      differing = was.arguments.zip(now.arguments).reject { |before, after| before == after }
-      differing.first if differing.size == 1
+      differing = was.forms.each_index.reject { |place| was.forms[place] == now.forms[place] }
+      [was.arguments[differing.first], now.arguments[differing.first]] if differing.size == 1
     end
     private_class_method :same_name, :pair, :without, :reworded, :one_edit?, :likeness, :weaker, :asserts_nothing?, :edited_value
   end

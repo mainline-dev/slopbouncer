@@ -126,7 +126,7 @@ A test that only calls helpers Slopbouncer has not been told about looks like a 
 
 - It catches tests that are visibly weaker. A test that looks thorough and checks nothing needs mutation testing, which is slower and runs the code. Use both: Slopbouncer on every change, mutation testing behind it.
 - It cannot tell a stronger assertion from a weaker one. An assertion swapped for another kind is reported as removed.
-- It compares assertions as they are written. A value rewritten in another style, such as `{ a: 1 }` to `a: 1`, is flagged as edited.
+- It compares what assertions parse to, so what a formatter changes is ignored: a string's quote style, white space and line breaks, parentheses round an assertion's arguments, a block's braces against `do` and `end`, a trailing comma. Anything that parses differently is still flagged, including the braces taken from round a trailing hash, as in `eq({ a: 1 })` rewritten as `eq(a: 1)`.
 - It reads one file at a time. A check that lives elsewhere, such as an RSpec shared example pulled in with `it_behaves_like`, is not followed, so a test that relies on one can look as if it asserts nothing.
 - It cannot see intent. A test changed on purpose, because the behaviour changed, is flagged the same way as one weakened to get a build to pass.
 
