@@ -144,3 +144,32 @@ describe 'asking the command about itself' do
     assert_equal 0, slopbouncer_with('-v').status
   end
 end
+
+describe 'the command when git cannot answer' do
+  include SlopbouncerDSL
+
+  it 'says in one line that it is not in a git repository, and stops' do
+    nowhere = slopbouncer_outside_a_repository('main..HEAD')
+
+    assert_equal 2, nowhere.status
+    assert_equal 1, nowhere.error.lines.size
+    assert_match(/git repository/i, nowhere.error)
+    assert_empty nowhere.output
+  end
+
+  it 'says the same as a coding agent\'s hook, and lets the agent finish' do
+    nowhere = slopbouncer_outside_a_repository('HEAD', '--agent')
+
+    assert_equal 0, nowhere.status
+    assert_equal 1, nowhere.error.lines.size
+  end
+
+  it 'gives git\'s first line of error for a commit that does not exist, and stops' do
+    given "describe 'Basket' do\nend\n"
+    missing = slopbouncer_with('no-such-commit..HEAD')
+
+    assert_equal 2, missing.status
+    assert_equal 1, missing.error.lines.size
+    assert_includes missing.error, 'no-such-commit'
+  end
+end

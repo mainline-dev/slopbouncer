@@ -81,6 +81,11 @@ class Driver
     shown.force_encoding(Encoding::UTF_8).gsub("\r\n", "\n")
   end
 
+  # Runs the command in a directory that is not in any git repository.
+  def outside_a_repository(*arguments)
+    Dir.mktmpdir('slopbouncer-nowhere') { |nowhere| slopbouncer(*arguments, from: nowhere) }
+  end
+
   def root
     File.realpath(@dir)
   end

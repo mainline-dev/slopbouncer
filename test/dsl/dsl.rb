@@ -128,6 +128,11 @@ module SlopbouncerDSL
     @driver.slopbouncer("#{@base}..HEAD", *flags).output
   end
 
+  # The command run somewhere that is not a git repository.
+  def slopbouncer_outside_a_repository(*arguments)
+    @driver.outside_a_repository(*arguments)
+  end
+
   # The command with exactly these arguments.
   def slopbouncer_with(*arguments)
     @driver.slopbouncer(*arguments)
