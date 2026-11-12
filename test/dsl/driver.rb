@@ -65,8 +65,12 @@ class Driver
     Run.new(findings: nil, status: status.exitstatus, output: output, error: error)
   end
 
-  def slopbouncer(*arguments, input: '')
-    output, error, status = Open3.capture3(RbConfig.ruby, BIN, *arguments, chdir: @dir, stdin_data: input)
+  def root
+    File.realpath(@dir)
+  end
+
+  def slopbouncer(*arguments, input: '', from: @dir)
+    output, error, status = Open3.capture3(RbConfig.ruby, BIN, *arguments, chdir: from, stdin_data: input)
     Run.new(findings: findings_in(output), status: status.exitstatus, output: output, error: error)
   end
 

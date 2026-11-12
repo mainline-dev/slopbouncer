@@ -91,3 +91,147 @@ describe 'speaking for a named agent' do
     assert_includes told.error, 'claude-code'
   end
 end
+
+# Cursor keeps hooks in .cursor/hooks.json. Its stop hook answers on standard
+# output: a follow-up message that Cursor gives the agent as its next turn.
+describe 'setting up Cursor' do
+  include SlopbouncerDSL
+
+  HOOKS = '.cursor/hooks.json'
+
+  def weakened_work
+    given "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n    assert_equal 2, size\n  end\nend\n"
+    edit_without_committing "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n  end\nend\n"
+  end
+
+  def follow_up(**input)
+    weakened_work
+    install('cursor')
+    run_stop_hook_from(HOOKS, { 'status' => 'completed', 'loop_count' => 0 }.merge(input.transform_keys(&:to_s)))
+  end
+
+  it 'writes the hook into a project with no hooks yet, in the form Cursor reads' do
+    assert_equal 0, install('cursor').status
+    assert_equal 1, JSON.parse(file(HOOKS))['version']
+    assert_equal 1, stop_hooks_in(HOOKS).size
+  end
+
+  it 'keeps the hooks a project already has' do
+    have_file HOOKS, JSON.generate('version' => 1,
+      'hooks' => { 'afterFileEdit' => [{ 'command' => '.cursor/hooks/format.sh' }], 'stop' => [{ 'command' => './audit.sh', 'loop_limit' => 10 }] })
+
+    install('cursor')
+
+    assert_equal [{ 'command' => '.cursor/hooks/format.sh' }], JSON.parse(file(HOOKS)).dig('hooks', 'afterFileEdit')
+    assert_equal 2, stop_hooks_in(HOOKS).size
+    assert_includes stop_hooks_in(HOOKS), './audit.sh'
+  end
+
+  it 'changes nothing when it is already set up' do
+    install('cursor')
+    once = file(HOOKS)
+    install('cursor')
+
+    assert_equal once, file(HOOKS)
+  end
+
+  it 'sets up a hook that sends the agent back with what it weakened' do
+    sent = follow_up
+
+    assert_equal 0, sent.status
+    assert_includes JSON.parse(sent.output).fetch('followup_message'), 'Basket adds up'
+    assert_includes JSON.parse(sent.output).fetch('followup_message'), test_file
+  end
+
+  it 'sends the agent back once only' do
+    assert_empty follow_up(loop_count: 1).output
+  end
+
+  it 'sends nothing after the person stopped the agent themselves' do
+    assert_empty follow_up(status: 'aborted').output
+  end
+
+  it 'sends nothing when nothing was weakened' do
+    given "describe 'Basket' do\nend\n"
+    install('cursor')
+
+    assert_empty run_stop_hook_from(HOOKS, 'status' => 'completed', 'loop_count' => 0).output
+  end
+
+  it 'has no per-person hooks file in the project to offer' do
+    assert_equal 2, install('cursor', '--local').status
+    refute file_exists?(HOOKS)
+  end
+end
+
+# Gemini CLI keeps hooks in .gemini/settings.json. Its AfterAgent hook answers
+# on standard output: denying the response, with a reason that Gemini gives
+# the agent as a new prompt.
+describe 'setting up Gemini CLI' do
+  include SlopbouncerDSL
+
+  GEMINI = '.gemini/settings.json'
+
+  def denial(**input)
+    given "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n    assert_equal 2, size\n  end\nend\n"
+    edit_without_committing "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n  end\nend\n"
+    install('gemini')
+    run_stop_hook_from(GEMINI, { 'stop_hook_active' => false }.merge(input.transform_keys(&:to_s)))
+  end
+
+  it 'writes the hook into a project with no settings yet' do
+    assert_equal 0, install('gemini').status
+    assert_equal 1, stop_hooks_in(GEMINI).size
+  end
+
+  it 'keeps the settings and the hooks a project already has' do
+    have_file GEMINI, JSON.generate('theme' => 'dark',
+      'hooks' => { 'AfterAgent' => [{ 'hooks' => [{ 'type' => 'command', 'command' => 'notify done' }] }] })
+
+    install('gemini')
+
+    assert_equal 'dark', JSON.parse(file(GEMINI))['theme']
+    assert_equal 2, stop_hooks_in(GEMINI).size
+    assert_includes stop_hooks_in(GEMINI), 'notify done'
+  end
+
+  it 'changes nothing when it is already set up' do
+    install('gemini')
+    once = file(GEMINI)
+    install('gemini')
+
+    assert_equal once, file(GEMINI)
+  end
+
+  it 'sets up a hook that turns the response down and says what was weakened' do
+    answer = JSON.parse(denial.output)
+
+    assert_equal 'deny', answer['decision']
+    assert_includes answer['reason'], 'Basket adds up'
+  end
+
+  it 'answers with nothing but the JSON Gemini reads, and succeeds' do
+    answer = denial
+
+    assert_equal [0, ''], [answer.status, answer.error]
+  end
+
+  it 'turns the response down once only' do
+    assert_empty denial(stop_hook_active: true).output
+  end
+
+  it 'has no per-person settings file in the project to offer' do
+    assert_equal 2, install('gemini', '--local').status
+  end
+end
+
+describe 'a hook run from somewhere other than the project' do
+  include SlopbouncerDSL
+
+  it 'checks the directory the agent says it is working in' do
+    given "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n    assert_equal 2, size\n  end\nend\n"
+    edit_without_committing "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n  end\nend\n"
+
+    assert_equal 2, as_the_agents_stop_hook_from_elsewhere.status
+  end
+end

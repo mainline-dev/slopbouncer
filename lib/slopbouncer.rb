@@ -87,9 +87,10 @@ module Slopbouncer
   # standard error and the agent is let finish.
   def self.stop_hook(target, input, agent_name)
     agent = Agents.named(agent_name)
-    return 0 if agent.stopped_before?(hook_input(input))
+    told = hook_input(input)
+    return 0 if agent.stopped_before?(told)
 
-    findings = check(target)
+    findings = Dir.chdir(working_directory(told)) { check(target) }
     return 0 if findings.empty?
 
     output, error, status = agent.stop(to_the_agent(findings))
@@ -99,6 +100,13 @@ module Slopbouncer
   rescue Error => e
     warn e.message
     0
+  end
+
+  # Where the agent says it is working, when its harness says so on the
+  # hook's input. Some harnesses run hooks from somewhere else.
+  def self.working_directory(told)
+    said = told['cwd'] || Array(told['workspace_roots']).first
+    said.is_a?(String) && File.directory?(said) ? said : Dir.pwd
   end
 
   # What the agent's harness passes the hook on standard input, if anything.
@@ -128,5 +136,5 @@ module Slopbouncer
       "#{finding.file}: #{finding.test}: #{finding.rule}: #{what}"
     }.join("\n")
   end
-  private_class_method :deleted, :settings, :install, :stop_hook, :hook_input, :to_the_agent
+  private_class_method :deleted, :settings, :install, :stop_hook, :working_directory, :hook_input, :to_the_agent
 end

@@ -50,6 +50,13 @@ module SlopbouncerDSL
       input: input || JSON.generate('stop_hook_active' => stopped_before))
   end
 
+  # The stop hook run from outside the repository, told where the agent is
+  # working the way a harness tells it: in the hook's input.
+  def as_the_agents_stop_hook_from_elsewhere
+    @driver.slopbouncer(@base, '--agent', from: Dir.tmpdir,
+      input: JSON.generate('stop_hook_active' => false, 'cwd' => @driver.root))
+  end
+
   # Sets an agent up in the repository, as a person would from its root.
   def install(agent, *flags)
     @driver.slopbouncer('install', agent, *flags)
@@ -67,16 +74,22 @@ module SlopbouncerDSL
     @driver.exists?(path)
   end
 
-  # The commands a settings file runs when the agent stops.
+  # The commands a settings file runs when the agent stops, whichever agent's
+  # file it is: Claude Code nests them under hooks.Stop, Gemini CLI under
+  # hooks.AfterAgent, and Cursor lists them under hooks.stop.
   def stop_hooks_in(path)
-    JSON.parse(file(path)).dig('hooks', 'Stop').flat_map { |entry| entry['hooks'].map { |hook| hook['command'] } }
+    hooks = JSON.parse(file(path)).fetch('hooks')
+    return hooks.fetch('stop').map { |hook| hook['command'] } if hooks.key?('stop')
+
+    (hooks['Stop'] || hooks.fetch('AfterAgent')).flat_map { |entry| entry['hooks'].map { |hook| hook['command'] } }
   end
 
   # Runs the Slopbouncer hook a settings file holds, the way the agent's
-  # harness would: through a shell, with the command on the path.
-  def run_stop_hook_from(path)
+  # harness would: through a shell, with the command on the path, and what
+  # the harness tells a stop hook on standard input.
+  def run_stop_hook_from(path, input = { 'stop_hook_active' => false })
     command = stop_hooks_in(path).find { |hook| hook.include?('slopbouncer') }
-    @driver.shell(command, input: JSON.generate('stop_hook_active' => false))
+    @driver.shell(command, input: JSON.generate(input))
   end
 
   def move(from, to)

@@ -52,7 +52,7 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 |---|---|
 | `--json` | Prints the findings as JSON |
 | `--strict` | Exits with 1 when anything is flagged |
-| `--agent=claude-code` | Runs as that coding agent's stop hook (see below) |
+| `--agent=NAME` | Runs as that coding agent's hook (see below) |
 
 Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
 
@@ -66,13 +66,19 @@ One command sets an agent up, from the root of your project:
 slopbouncer install claude-code
 ```
 
-It adds one hook to `.claude/settings.json` and keeps everything else in the file. Running it again changes nothing. Add `--local` to write to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
+| Agent | Command | What it adds |
+|---|---|---|
+| Claude Code | `slopbouncer install claude-code` | A `Stop` hook in `.claude/settings.json` |
+| Cursor | `slopbouncer install cursor` | A `stop` hook in `.cursor/hooks.json` |
+| Gemini CLI | `slopbouncer install gemini` | An `AfterAgent` hook in `.gemini/settings.json` |
 
-When the agent is about to finish and has weakened an existing test, it is stopped once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+It adds one hook and keeps everything else in the file. Running it again changes nothing. For Claude Code, `--local` writes to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
+
+When the agent is about to finish and has weakened an existing test, it is sent back once and told which tests, with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
 
 The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
 
-Claude Code is the one agent it can be set up for today.
+Claude Code is the one this has been run under. The Cursor and Gemini CLI hooks are written to those agents' published hook contracts and tested against them, and have not yet been run inside either agent. If one misbehaves, please open an issue.
 
 An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 
