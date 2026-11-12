@@ -71,6 +71,7 @@ slopbouncer install claude-code
 | Claude Code | `slopbouncer install claude-code` | A `Stop` hook in `.claude/settings.json` |
 | Cursor | `slopbouncer install cursor` | A `stop` hook in `.cursor/hooks.json` |
 | Gemini CLI | `slopbouncer install gemini` | An `AfterAgent` hook in `.gemini/settings.json` |
+| Codex | `slopbouncer install codex` | A `Stop` hook in `.codex/hooks.json` |
 
 It adds one hook and keeps everything else in the file. Running it again changes nothing. For Claude Code, `--local` writes to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
 
@@ -78,7 +79,9 @@ When the agent is about to finish and has weakened an existing test, it is sent 
 
 The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
 
-Claude Code is the one this has been run under. The Cursor and Gemini CLI hooks are written to those agents' published hook contracts and tested against them, and have not yet been run inside either agent. If one misbehaves, please open an issue.
+Codex skips a new hook until you have trusted it: after installing, open `/hooks` in Codex and review it.
+
+Claude Code is the one this has been run under. The Cursor, Gemini CLI and Codex hooks are written to those agents' published hook contracts and tested against them, and have not yet been run inside the agents themselves. If one misbehaves, please open an issue.
 
 An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 

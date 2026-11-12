@@ -93,7 +93,7 @@ module Slopbouncer
     findings = Dir.chdir(working_directory(told)) { check(target) }
     return 0 if findings.empty?
 
-    output, error, status = agent.stop(to_the_agent(findings))
+    output, error, status = agent.block(to_the_agent(findings))
     print output
     warn error unless error.empty?
     status

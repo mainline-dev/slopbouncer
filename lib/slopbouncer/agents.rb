@@ -40,8 +40,8 @@ module Slopbouncer
         input['stop_hook_active'] == true
       end
 
-      # What to write and exit with to stop the agent: [output, error, status].
-      def self.stop(message)
+      # What to write and exit with to send the agent back: [output, error, status].
+      def self.block(message)
         ['', message, 2]
       end
 
@@ -86,7 +86,7 @@ module Slopbouncer
         input['loop_count'].to_i.positive? || (input.key?('status') && input['status'] != 'completed')
       end
 
-      def self.stop(message)
+      def self.block(message)
         [JSON.generate('followup_message' => message), '', 0]
       end
 
@@ -130,7 +130,7 @@ module Slopbouncer
         input['stop_hook_active'] == true
       end
 
-      def self.stop(message)
+      def self.block(message)
         [JSON.generate('decision' => 'deny', 'reason' => message), '', 0]
       end
 
@@ -140,7 +140,52 @@ module Slopbouncer
       private_class_method :after_agent
     end
 
-    ALL = { ClaudeCode::NAME => ClaudeCode, Cursor::NAME => Cursor, Gemini::NAME => Gemini }.freeze
+    # Codex runs Stop hooks when a turn is about to end. A hook answers on
+    # standard output with JSON: a decision to block, whose reason Codex gives
+    # the agent as a new prompt. Codex skips a new or changed hook until a
+    # person has reviewed and trusted it.
+    module Codex
+      NAME = 'codex'
+      SHARED = '.codex/hooks.json'
+      AFTER = 'Codex skips a new hook until you trust it: open /hooks in Codex to review it.'
+
+      # Codex's per-person hooks are in the home directory and apply to every
+      # project, so there is nothing to offer here.
+      def self.settings_path(local:)
+        raise Error, "Codex keeps a project's hooks in #{SHARED} only. Run it without --local." if local
+
+        SHARED
+      end
+
+      def self.command(base)
+        "slopbouncer #{base} --agent=#{NAME}"
+      end
+
+      def self.installed?(settings)
+        stop(settings).flat_map { |entry| entry['hooks'].to_a }.any? { |hook| hook['command'].to_s.include?('slopbouncer') }
+      end
+
+      def self.add(settings, command)
+        entry = { 'hooks' => [{ 'type' => 'command', 'command' => command }] }
+        settings.merge('hooks' => settings.fetch('hooks', {}).merge('Stop' => stop(settings) + [entry]))
+      end
+
+      # Codex says on the hook's input whether Stop already continued this turn.
+      def self.stopped_before?(input)
+        input['stop_hook_active'] == true
+      end
+
+      def self.block(message)
+        [JSON.generate('decision' => 'block', 'reason' => message), '', 0]
+      end
+
+      def self.stop(settings)
+        settings.dig('hooks', 'Stop').to_a
+      end
+      private_class_method :stop
+    end
+
+    ALL = { ClaudeCode::NAME => ClaudeCode, Cursor::NAME => Cursor, Gemini::NAME => Gemini, Codex::NAME => Codex }.freeze
     DEFAULT = ClaudeCode::NAME
 
     def self.named(name)

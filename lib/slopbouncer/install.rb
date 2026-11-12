@@ -17,7 +17,8 @@ module Slopbouncer
 
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, "#{JSON.pretty_generate(agent.add(settings, agent.command(base)))}\n")
-      "Added Slopbouncer to #{path}. #{agent_name} will run it when it is about to finish."
+      ["Added Slopbouncer to #{path}. #{agent_name} will run it when it is about to finish.",
+       (agent::AFTER if agent.const_defined?(:AFTER))].compact.join("\n")
     end
 
     def self.read(path)

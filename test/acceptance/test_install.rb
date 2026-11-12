@@ -235,3 +235,80 @@ describe 'a hook run from somewhere other than the project' do
     assert_equal 2, as_the_agents_stop_hook_from_elsewhere.status
   end
 end
+
+# Codex keeps a project's hooks in .codex/hooks.json. Its Stop hook answers on
+# standard output with JSON: a decision to block, whose reason Codex gives the
+# agent as a new prompt. Codex runs a new hook only once a person has trusted it.
+describe 'setting up Codex' do
+  include SlopbouncerDSL
+
+  CODEX = '.codex/hooks.json'
+
+  def continuation(**input)
+    given "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n    assert_equal 2, size\n  end\nend\n"
+    edit_without_committing "describe 'Basket' do\n  it 'adds up' do\n    assert_equal 5, total\n  end\nend\n"
+    install('codex')
+    run_stop_hook_from(CODEX, { 'stop_hook_active' => false }.merge(input.transform_keys(&:to_s)))
+  end
+
+  it 'writes the hook into a project with no hooks yet' do
+    assert_equal 0, install('codex').status
+    assert_equal 1, stop_hooks_in(CODEX).size
+  end
+
+  it 'says where in Codex to trust the new hook, since Codex skips it until then' do
+    assert_includes install('codex').output, '/hooks'
+  end
+
+  it 'keeps the hooks a project already has' do
+    have_file CODEX, JSON.generate('description' => 'ours',
+      'hooks' => { 'Stop'       => [{ 'hooks' => [{ 'type' => 'command', 'command' => 'notify done' }] }],
+                   'PreToolUse' => [{ 'matcher' => 'Bash', 'hooks' => [{ 'type' => 'command', 'command' => 'true' }] }] })
+
+    install('codex')
+    hooks = JSON.parse(file(CODEX))
+
+    assert_equal 'ours', hooks['description']
+    assert_equal 1, hooks.dig('hooks', 'PreToolUse').size
+    assert_equal 2, stop_hooks_in(CODEX).size
+    assert_includes stop_hooks_in(CODEX), 'notify done'
+  end
+
+  it 'changes nothing when it is already set up' do
+    install('codex')
+    once = file(CODEX)
+    install('codex')
+
+    assert_equal once, file(CODEX)
+  end
+
+  it 'sets up a hook that keeps the agent going and says what was weakened' do
+    answer = JSON.parse(continuation.output)
+
+    assert_equal 'block', answer['decision']
+    assert_includes answer['reason'], 'Basket adds up'
+  end
+
+  it 'answers with nothing but the JSON Codex reads, and succeeds' do
+    answer = continuation
+
+    assert_equal [0, ''], [answer.status, answer.error]
+  end
+
+  it 'keeps the agent going once only' do
+    assert_empty continuation(stop_hook_active: true).output
+  end
+
+  it 'says nothing at all when nothing was weakened' do
+    given "describe 'Basket' do\nend\n"
+    install('codex')
+
+    answer = run_stop_hook_from(CODEX)
+
+    assert_equal [0, '', ''], [answer.status, answer.output, answer.error]
+  end
+
+  it 'has no per-person hooks file in the project to offer' do
+    assert_equal 2, install('codex', '--local').status
+  end
+end
