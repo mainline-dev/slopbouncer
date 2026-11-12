@@ -3,11 +3,59 @@
 [![Gem version](https://img.shields.io/gem/v/slopbouncer)](https://rubygems.org/gems/slopbouncer)
 [![Test](https://github.com/mainline-dev/slopbouncer/actions/workflows/test.yml/badge.svg)](https://github.com/mainline-dev/slopbouncer/actions/workflows/test.yml)
 
-A static check that flags tests which got weaker in a change.
+A stop hook for coding agents that catches weakened tests.
 
-A coding agent's job is to make the checks pass. One way to do that is to weaken the check. Slopbouncer compares each test before and after a change and reports the ones that lost something, so a person can decide whether that was intended. It reads code and never runs it, so it takes seconds.
+A coding agent's job is to make the checks pass. One way is to weaken the check. When an agent is about to finish and has weakened an existing test, Slopbouncer sends it back once: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. It reads code and never runs it, so it takes a fraction of a second.
 
 Status: in development. It reads Ruby tests today: Minitest, as `it` blocks or `test_` methods, and RSpec.
+
+## Setting up your agent
+
+Slopbouncer is most use when the agent that made the change hears about it. The agent knows why it changed a test, and it can put the test back.
+
+It needs Ruby 3.2 or later and git.
+
+```shell
+gem install slopbouncer
+```
+
+One command sets an agent up, from the root of your project:
+
+```shell
+slopbouncer install claude-code
+```
+
+| Agent | Command | What it adds |
+|---|---|---|
+| Claude Code | `slopbouncer install claude-code` | A `Stop` hook in `.claude/settings.json` |
+| Cursor | `slopbouncer install cursor` | A `stop` hook in `.cursor/hooks.json` |
+| Gemini CLI | `slopbouncer install gemini` | An `AfterAgent` hook in `.gemini/settings.json` |
+| Codex | `slopbouncer install codex` | A `Stop` hook in `.codex/hooks.json` |
+
+It adds one hook and keeps everything else in the file. Running it again changes nothing. For Claude Code, `--local` writes to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
+
+When the agent is about to finish and has weakened an existing test, it is sent back once and told which tests (the first 20, and how to list the rest), with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
+
+The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
+
+Codex skips a new hook until you have trusted it: after installing, open `/hooks` in Codex and review it.
+
+Claude Code is the one this has been run under. The Cursor, Gemini CLI and Codex hooks are written to those agents' published hook contracts and tested against them, and have not yet been run inside the agents themselves. If one misbehaves, please open an issue.
+
+## What the agent is told
+
+This is what the hook printed for an agent that had removed an assertion from one test and edited the value another expects:
+
+```
+Slopbouncer: this change weakens 2 existing tests.
+
+test/checkout_test.rb: Checkout lets a guest pay: assertion_removed: assert_equal 'paid', order.status
+test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 100 → 90
+
+For each one, do one of two things before you finish:
+1. Put the test back as it was, and make the code pass it.
+2. Leave the change, and tell the person which behaviour changed and why the test had to change with it.
+```
 
 ## What it flags
 
@@ -26,15 +74,11 @@ Status: in development. It reads Ruby tests today: Minitest, as `it` blocks or `
 - A test that was reworded, moved to another file, or both, with its checks unchanged.
 - Files that are not tests.
 
-## Running it
+## Running it yourself and in a pipeline
 
-It needs Ruby 3.2 or later and git.
+An agent set on a passing build can still get round a hook, so keep running the plain command where a person will see it. In a pipeline, or before a push, it is the backstop to the hook.
 
-```shell
-gem install slopbouncer
-```
-
-Then run it from the root of the repository you want checked:
+Run it from the root of the repository you want checked:
 
 ```shell
 slopbouncer main..HEAD
@@ -72,40 +116,11 @@ test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 10
 | `--strict` | Exits with 1 when anything is flagged |
 | `--all` | At a terminal, lists every finding. Without it, more than 30 findings are shown as a count of each rule in each file |
 | `--color` | Uses the terminal layout, in colour, wherever the output goes. For a script whose own output a person reads |
-| `--agent=NAME` | Runs as that coding agent's hook (see below) |
+| `--agent=NAME` | Runs as that coding agent's hook (see above) |
 | `--help`, `-h` | Prints how to use it |
 | `--version`, `-v` | Prints the version |
 
 Setting `NO_COLOR` keeps the terminal layout and leaves the colour out. Without `--strict` it exits with 0 whatever it finds: it flags for review and does not block. It exits with 2 when it is given nothing to compare.
-
-## Feeding it back to a coding agent
-
-Slopbouncer is most use when the agent that made the change hears about it. The agent knows why it changed a test, and it can put the test back.
-
-One command sets an agent up, from the root of your project:
-
-```shell
-slopbouncer install claude-code
-```
-
-| Agent | Command | What it adds |
-|---|---|---|
-| Claude Code | `slopbouncer install claude-code` | A `Stop` hook in `.claude/settings.json` |
-| Cursor | `slopbouncer install cursor` | A `stop` hook in `.cursor/hooks.json` |
-| Gemini CLI | `slopbouncer install gemini` | An `AfterAgent` hook in `.gemini/settings.json` |
-| Codex | `slopbouncer install codex` | A `Stop` hook in `.codex/hooks.json` |
-
-It adds one hook and keeps everything else in the file. Running it again changes nothing. For Claude Code, `--local` writes to `.claude/settings.local.json`, which keeps the hook to you and out of the settings your team shares.
-
-When the agent is about to finish and has weakened an existing test, it is sent back once and told which tests (the first 20, and how to list the rest), with two ways to answer: put the test back and make the code pass it, or leave the change and tell the person which behaviour changed. The second time it is let finish, so its reasons are on the record for the person to read.
-
-The hook checks the work the agent has not committed. If your agent commits as it goes, edit the hook's command to name the commit its work started from, such as `origin/main`, in place of `HEAD`.
-
-Codex skips a new hook until you have trusted it: after installing, open `/hooks` in Codex and review it.
-
-Claude Code is the one this has been run under. The Cursor, Gemini CLI and Codex hooks are written to those agents' published hook contracts and tested against them, and have not yet been run inside the agents themselves. If one misbehaves, please open an issue.
-
-An agent set on a passing build can still get round a static check, so keep running the plain command where a person will see it.
 
 ## RSpec
 
