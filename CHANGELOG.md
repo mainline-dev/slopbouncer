@@ -11,6 +11,7 @@ What changed in each version of Slopbouncer.
 - `--help` and `-h` print how to use the command. `--version` and `-v` print the version.
 - Run outside a git repository, the command says so in one line. Any other git failure is reported as git's first line of error.
 - It runs on Ruby 3.2 and later. Before, it asked for Ruby 3.4.
+- Its reports say tests look weaker, where they said tests got weaker. A finding is something to look at, and the tool cannot tell whether the change was intended.
 
 ## 0.3.0 - 2026-11-12
 

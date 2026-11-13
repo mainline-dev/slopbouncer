@@ -18,7 +18,7 @@ module Slopbouncer
 
     def self.call(findings, colour:, all: false)
       paint = ->(text, code) { colour ? "\e[#{code}m#{text}\e[0m" : text }
-      return paint.call('No tests got weaker.', GREEN) if findings.empty?
+      return paint.call('No tests look weaker.', GREEN) if findings.empty?
 
       files = findings.group_by(&:file)
       tests = files.sum { |_file, found| found.map(&:test).uniq.size }
@@ -48,7 +48,7 @@ module Slopbouncer
     end
 
     def self.count(tests, files)
-      "#{tests} #{tests == 1 ? 'test' : 'tests'} got weaker in #{files} #{files == 1 ? 'file' : 'files'}"
+      "#{tests} #{tests == 1 ? 'test looks' : 'tests look'} weaker in #{files} #{files == 1 ? 'file' : 'files'}"
     end
     private_class_method :counted, :rule, :file, :detail, :count
   end

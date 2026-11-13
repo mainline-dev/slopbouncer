@@ -63,7 +63,7 @@
   <p>Claude Code is the one it has been run under so far. The Cursor, Gemini CLI and Codex hooks are written to those agents' published hook contracts and have not yet been run inside the agents themselves.</p>
 
   <h2>What the agent is told</h2>
-<pre>Slopbouncer: this change weakens 2 existing tests.
+<pre>Slopbouncer: this change looks to weaken 2 existing tests.
 
 test/checkout_test.rb: Checkout lets a guest pay: assertion_removed: assert_equal 'paid', order.status
 test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 100 → 90
@@ -103,7 +103,7 @@ For each one, do one of two things before you finish:
   Refund refunds part of an order
     <span class="w">expected_value_changed</span>  100 → 90
 
-3 tests got weaker in 3 files</pre>
+3 tests look weaker in 3 files</pre>
 
   <h2>Its limits</h2>
   <p>Slopbouncer catches tests that are visibly weaker. A test that looks thorough and checks nothing needs mutation testing, which is slower and runs the code. Use both: Slopbouncer on every change, mutation testing behind it.</p>

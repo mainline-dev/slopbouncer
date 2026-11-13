@@ -47,7 +47,7 @@ Claude Code is the one this has been run under. The Cursor, Gemini CLI and Codex
 This is what the hook printed for an agent that had removed an assertion from one test and edited the value another expects:
 
 ```
-Slopbouncer: this change weakens 2 existing tests.
+Slopbouncer: this change looks to weaken 2 existing tests.
 
 test/checkout_test.rb: Checkout lets a guest pay: assertion_removed: assert_equal 'paid', order.status
 test/refund_test.rb: Refund refunds part of an order: expected_value_changed: 100 → 90
@@ -99,7 +99,7 @@ test/refund_test.rb
   Refund refunds part of an order
     expected_value_changed  100 → 90
 
-3 tests got weaker in 3 files
+3 tests look weaker in 3 files
 ```
 
 When its output goes to a file or another program, it prints one plain line for each finding:

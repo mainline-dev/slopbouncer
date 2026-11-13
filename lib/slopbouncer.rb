@@ -170,7 +170,7 @@ module Slopbouncer
     more = findings.size - TOLD_TO_AN_AGENT
     rest = "\nand #{more} more. Run `slopbouncer #{target}` to list them all.\n" if more.positive?
     <<~MESSAGE
-      Slopbouncer: this change weakens #{findings.size} existing #{findings.size == 1 ? 'test' : 'tests'}.
+      Slopbouncer: this change looks to weaken #{findings.size} existing #{findings.size == 1 ? 'test' : 'tests'}.
 
       #{report(findings.first(TOLD_TO_AN_AGENT))}
       #{rest}
